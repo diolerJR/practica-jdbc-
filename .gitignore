@@ -1,0 +1,15 @@
+# Build
+target/
+out/
+cp.txt
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Otros
+*.log
