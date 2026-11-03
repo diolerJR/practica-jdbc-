@@ -13,3 +13,4 @@ cp.txt
 
 # Otros
 *.log
+.sf/
