@@ -6,7 +6,6 @@ import com.accesodatos.practicajdbc.dominio.Precio;
 import com.accesodatos.practicajdbc.dominio.Producto;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,30 +15,27 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
 
     // SQL
     private static final String SQL_BASE =
-            "SELECT pe.id, pe.cliente_email, pe.cantidad, pe.fecha_pedido, pe.total, " +
-            "       p.id AS producto_id, p.nombre AS producto_nombre, p.precio AS producto_precio, " +
-            "       p.stock, p.formato, p.sabor_material, " +
-            "       c.id AS categoria_id, c.nombre AS categoria_nombre, c.descripcion, c.es_suplemento " +
-            "FROM pedido pe " +
-            "INNER JOIN producto p ON pe.producto_id = p.id " +
-            "INNER JOIN categoria c ON p.categoria_id = c.id";
+            "SELECT ped.id, ped.cliente_email, ped.cantidad, ped.fecha_pedido, ped.total, " +
+                    "       p.id AS producto_id, p.nombre AS producto_nombre, p.precio, p.stock, p.formato, p.sabor_material, " +
+                    "       c.id AS categoria_id, c.nombre AS categoria_nombre, c.descripcion, c.es_suplemento " +
+                    "FROM pedido ped " +
+                    "INNER JOIN producto p ON ped.producto_id = p.id " +
+                    "LEFT JOIN categoria c ON p.categoria_id = c.id";
 
     private static final String SQL_INSERT =
             "INSERT INTO pedido (cliente_email, cantidad, fecha_pedido, total, producto_id) " +
-            "VALUES (?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?)";
     private static final String SQL_UPDATE =
-            "UPDATE pedido SET cliente_email = ?, cantidad = ?, fecha_pedido = ?, total = ?, producto_id = ? " +
-            "WHERE id = ?";
+            "UPDATE pedido SET cliente_email = ?, cantidad = ?, fecha_pedido = ?, " +
+                    "total = ?, producto_id = ? WHERE id = ?";
     private static final String SQL_COUNT = "SELECT COUNT(*) FROM pedido";
     private static final String SQL_EXISTS = "SELECT 1 FROM pedido WHERE id = ?";
     private static final String SQL_DELETE_BY_ID = "DELETE FROM pedido WHERE id = ?";
     private static final String SQL_DELETE_ALL = "DELETE FROM pedido";
     private static final String SQL_SELECT_BY_CLIENTE =
-            SQL_BASE + " WHERE pe.cliente_email = ?";
-    private static final String SQL_SELECT_FECHA =
-            SQL_BASE + " WHERE pe.fecha_pedido = ?";
-    private static final String SQL_TOTAL_CLIENTE =
-            "SELECT COALESCE(SUM(total), 0) FROM pedido WHERE cliente_email = ?";
+            SQL_BASE + " WHERE LOWER(ped.cliente_email) = LOWER(?)";
+    private static final String SQL_TOTAL_POR_CLIENTE =
+            "SELECT COALESCE(SUM(total), 0) FROM pedido WHERE LOWER(cliente_email) = LOWER(?)";
 
     @Override
     public long count() {
@@ -54,6 +50,9 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
 
     @Override
     public boolean existsById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_EXISTS)) {
             ps.setLong(1, id);
@@ -67,13 +66,19 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
 
     @Override
     public Pedido findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         return findByIdOptional(id).orElse(null);
     }
 
     @Override
     public Optional<Pedido> findByIdOptional(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
-             PreparedStatement ps = c.prepareStatement(SQL_BASE + " WHERE pe.id = ?")) {
+             PreparedStatement ps = c.prepareStatement(SQL_BASE + " WHERE ped.id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? Optional.of(mapearFila(rs)) : Optional.empty();
@@ -94,7 +99,9 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(SQL_BASE)) {
             List<Pedido> resultado = new ArrayList<>();
-            while (rs.next()) resultado.add(mapearFila(rs));
+            while (rs.next()) {
+                resultado.add(mapearFila(rs));
+            }
             return resultado;
         } catch (SQLException e) {
             throw new RuntimeException("Error listando pedidos", e);
@@ -103,6 +110,9 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
 
     @Override
     public <S extends Pedido> S save(S pedido) {
+        if (pedido == null) {
+            throw new IllegalArgumentException("El pedido no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection()) {
             boolean esNuevo = pedido.getId() == null || !existsById(pedido.getId());
             if (esNuevo) {
@@ -128,6 +138,9 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
 
     @Override
     public void deleteById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_DELETE_BY_ID)) {
             ps.setLong(1, id);
@@ -138,43 +151,44 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
     }
 
     @Override
-    public long deleteAll() {
+    public void deleteAll() {
         try (Connection c = ConexionBD.getConnection();
              Statement st = c.createStatement()) {
-            return st.executeUpdate(SQL_DELETE_ALL);
+            st.executeUpdate(SQL_DELETE_ALL);
         } catch (SQLException e) {
             throw new RuntimeException("Error borrando todos los pedidos", e);
         }
     }
 
-    @Override
     public Pedido deleteAndGetById(Long id) {
         Pedido pedido = findById(id);
-        if (pedido != null) deleteById(id);
+        if (pedido != null) {
+            deleteById(id);
+        }
         return pedido;
     }
 
-    @Override
     public List<Pedido> findLast(int n) {
         List<Pedido> todos = findAllToList();
         return todos.subList(Math.max(0, todos.size() - n), todos.size());
     }
 
-    @Override
     public boolean isEmpty() {
         return count() == 0;
     }
 
     // Métodos propios
 
-    /** Pedidos de un cliente por su email. */
+    /** Pedidos realizados por un cliente según su email. */
     public List<Pedido> findByCliente(String email) {
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_SELECT_BY_CLIENTE)) {
-            ps.setString(1, email.toLowerCase());
+            ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 List<Pedido> resultado = new ArrayList<>();
-                while (rs.next()) resultado.add(mapearFila(rs));
+                while (rs.next()) {
+                    resultado.add(mapearFila(rs));
+                }
                 return resultado;
             }
         } catch (SQLException e) {
@@ -182,31 +196,16 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
         }
     }
 
-    /** Pedidos de una fecha concreta. */
-    public List<Pedido> findByFecha(LocalDate fecha) {
-        try (Connection c = ConexionBD.getConnection();
-             PreparedStatement ps = c.prepareStatement(SQL_SELECT_FECHA)) {
-            ps.setDate(1, Date.valueOf(fecha));
-            try (ResultSet rs = ps.executeQuery()) {
-                List<Pedido> resultado = new ArrayList<>();
-                while (rs.next()) resultado.add(mapearFila(rs));
-                return resultado;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error buscando pedidos por fecha", e);
-        }
-    }
-
-    /** Importe total gastado por un cliente (SUM en BD). */
+    /** Suma total gastada por un cliente en todos sus pedidos. */
     public double totalGastadoPorCliente(String email) {
         try (Connection c = ConexionBD.getConnection();
-             PreparedStatement ps = c.prepareStatement(SQL_TOTAL_CLIENTE)) {
-            ps.setString(1, email.toLowerCase());
+             PreparedStatement ps = c.prepareStatement(SQL_TOTAL_POR_CLIENTE)) {
+            ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getDouble(1) : 0;
+                return rs.next() ? rs.getDouble(1) : 0.0;
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Error calculando total del cliente " + email, e);
+            throw new RuntimeException("Error calculando total gastado por " + email, e);
         }
     }
 
@@ -221,19 +220,25 @@ public class RepositorioPedido implements IRepositorioExtend<Pedido, Long> {
     }
 
     private Pedido mapearFila(ResultSet rs) throws SQLException {
-        Categoria categoria = new Categoria(
-                rs.getLong("categoria_id"),
-                rs.getString("categoria_nombre"),
-                rs.getString("descripcion"),
-                rs.getBoolean("es_suplemento"));
+        Categoria categoria = null;
+        long categoriaId = rs.getLong("categoria_id");
+        if (!rs.wasNull()) {
+            categoria = new Categoria(
+                    categoriaId,
+                    rs.getString("categoria_nombre"),
+                    rs.getString("descripcion"),
+                    rs.getBoolean("es_suplemento"));
+        }
+
         Producto producto = new Producto(
                 rs.getLong("producto_id"),
                 rs.getString("producto_nombre"),
-                new Precio(rs.getDouble("producto_precio")),
+                new Precio(rs.getDouble("precio")),
                 rs.getInt("stock"),
                 rs.getString("formato"),
                 rs.getString("sabor_material"),
                 categoria);
+
         return new Pedido(
                 rs.getLong("id"),
                 rs.getString("cliente_email"),

@@ -1,6 +1,8 @@
 package com.accesodatos.practicajdbc.repositorio;
 
 import com.accesodatos.practicajdbc.dominio.Categoria;
+import com.accesodatos.practicajdbc.dominio.Precio;
+import com.accesodatos.practicajdbc.dominio.Producto;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -29,6 +31,8 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
             SQL_SELECT_ALL + " WHERE nombre LIKE ?";
     private static final String SQL_SELECT_SUPLEMENTOS =
             SQL_SELECT_ALL + " WHERE es_suplemento = TRUE";
+    private static final String SQL_SELECT_PRODUCTOS_DE_CATEGORIA =
+            "SELECT id, nombre, precio, stock, formato, sabor_material FROM producto WHERE categoria_id = ?";
 
     @Override
     public long count() {
@@ -43,6 +47,9 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
 
     @Override
     public boolean existsById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_EXISTS)) {
             ps.setLong(1, id);
@@ -56,11 +63,17 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
 
     @Override
     public Categoria findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         return findByIdOptional(id).orElse(null);
     }
 
     @Override
     public Optional<Categoria> findByIdOptional(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_SELECT_BY_ID)) {
             ps.setLong(1, id);
@@ -94,6 +107,9 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
 
     @Override
     public <S extends Categoria> S save(S categoria) {
+        if (categoria == null) {
+            throw new IllegalArgumentException("La categoría no puede ser nula");
+        }
         try (Connection c = ConexionBD.getConnection()) {
             boolean esNueva = categoria.getId() == null || !existsById(categoria.getId());
             if (esNueva) {
@@ -119,6 +135,9 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
 
     @Override
     public void deleteById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_DELETE_BY_ID)) {
             ps.setLong(1, id);
@@ -129,16 +148,15 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
     }
 
     @Override
-    public long deleteAll() {
+    public void deleteAll() {
         try (Connection c = ConexionBD.getConnection();
              Statement st = c.createStatement()) {
-            return st.executeUpdate(SQL_DELETE_ALL);
+            st.executeUpdate(SQL_DELETE_ALL);
         } catch (SQLException e) {
             throw new RuntimeException("Error borrando todas las categorías", e);
         }
     }
 
-    @Override
     public Categoria deleteAndGetById(Long id) {
         Categoria categoria = findById(id);
         if (categoria != null) {
@@ -147,13 +165,11 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
         return categoria;
     }
 
-    @Override
     public List<Categoria> findLast(int n) {
         List<Categoria> todas = findAllToList();
         return todas.subList(Math.max(0, todas.size() - n), todas.size());
     }
 
-    @Override
     public boolean isEmpty() {
         return count() == 0;
     }
@@ -197,10 +213,33 @@ public class RepositorioCategoria implements IRepositorioExtend<Categoria, Long>
     }
 
     private Categoria mapearFila(ResultSet rs) throws SQLException {
-        return new Categoria(
+        Categoria categoria = new Categoria(
                 rs.getLong("id"),
                 rs.getString("nombre"),
                 rs.getString("descripcion"),
                 rs.getBoolean("es_suplemento"));
+        categoria.loadProductos(cargarProductosDeCategoria(categoria));
+        return categoria;
+    }
+
+    private List<Producto> cargarProductosDeCategoria(Categoria categoria) throws SQLException {
+        try (Connection c = ConexionBD.getConnection();
+             PreparedStatement ps = c.prepareStatement(SQL_SELECT_PRODUCTOS_DE_CATEGORIA)) {
+            ps.setLong(1, categoria.getId());
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Producto> productos = new ArrayList<>();
+                while (rs.next()) {
+                    productos.add(new Producto(
+                            rs.getLong("id"),
+                            rs.getString("nombre"),
+                            new Precio(rs.getDouble("precio")),
+                            rs.getInt("stock"),
+                            rs.getString("formato"),
+                            rs.getString("sabor_material"),
+                            categoria));
+                }
+                return productos;
+            }
+        }
     }
 }

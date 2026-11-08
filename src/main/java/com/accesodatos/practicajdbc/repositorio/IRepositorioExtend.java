@@ -1,19 +1,22 @@
 package com.accesodatos.practicajdbc.repositorio;
 
 import java.util.List;
+import java.util.Optional;
 
-/** Contrato extendido proporcionado en la práctica (borrado masivo y extras). */
+/** Contrato extendido proporcionado en la práctica. */
 public interface IRepositorioExtend<T, ID> extends IRepositorio<T, ID> {
 
-    /** Borra todas las entidades. Devuelve cuántas. */
-    long deleteAll();
+    /**
+     * Devuelve la entidad T con identificador id.
+     * @param id Identificador de la entidad
+     * @return Entidad que tiene como identificador id u Optional#empty() si no se encuentra
+     * @throws IllegalArgumentException En caso de ser id nulo
+     */
+    Optional<T> findByIdOptional(ID id);
 
-    /** Borra y devuelve la entidad con ese ID (o null). */
-    T deleteAndGetById(ID id);
-
-    /** Últimas n entidades insertadas. */
-    List<T> findLast(int n);
-
-    /** true si no hay nada guardado. */
-    boolean isEmpty();
+    /**
+     * Devuelve todas las instancias de tipo T.
+     * @return todas las instancias
+     */
+    List<T> findAllToList();
 }

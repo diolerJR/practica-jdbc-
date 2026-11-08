@@ -1,32 +1,54 @@
 package com.accesodatos.practicajdbc.repositorio;
 
-import java.util.List;
-import java.util.Optional;
-
 /** Contrato genérico de repositorio proporcionado en la práctica. */
 public interface IRepositorio<T, ID> {
 
-    /** Número total de elementos. */
+    /**
+     * Devuelve el número de entidades.
+     * @return número de entidades
+     */
     long count();
 
-    /** ¿Existe una entidad con ese ID? */
+    /**
+     * Borra la entidad con identificador id.
+     * Si no se encuentra no realiza ninguna acción.
+     * @param id identificador de la entidad. No debe ser nulo
+     * @throws IllegalArgumentException En caso de ser id nulo
+     */
+    void deleteById(ID id);
+
+    /**
+     * Borra todas las entidades del repositorio.
+     */
+    void deleteAll();
+
+    /**
+     * Devuelve true si existe la entidad con identificador id.
+     * @param id Identificador de la entidad
+     * @return true si existe la entidad con el identificador id
+     * @throws IllegalArgumentException En caso de ser id nulo
+     */
     boolean existsById(ID id);
 
-    /** Entidad con ese ID, o null si no existe. */
+    /**
+     * Devuelve la entidad T con identificador id.
+     * @param id Identificador de la entidad
+     * @return Entidad que tiene como identificador id
+     * @throws IllegalArgumentException En caso de ser id nulo
+     */
     T findById(ID id);
 
-    /** Todas las entidades. */
+    /**
+     * Devuelve todas las instancias.
+     * @return Todas las instancias
+     */
     Iterable<T> findAll();
 
-    /** Entidad con ese ID en un Optional. */
-    Optional<T> findByIdOptional(ID id);
-
-    /** Todas las entidades como List. */
-    List<T> findAllToList();
-
-    /** Inserta si es nueva, actualiza si ya existe. */
+    /**
+     * Guarda la entidad entity.
+     * @param entity entidad a guardar. No debe ser nulo
+     * @return entidad guardada
+     * @throws IllegalArgumentException En caso de ser entity nulo
+     */
     <S extends T> S save(S entity);
-
-    /** Borra la entidad con ese ID. */
-    void deleteById(ID id);
 }

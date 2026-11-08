@@ -15,16 +15,16 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
     // SQL
     private static final String SQL_BASE =
             "SELECT p.id, p.nombre, p.precio, p.stock, p.formato, p.sabor_material, " +
-            "       c.id AS categoria_id, c.nombre AS categoria_nombre, descripcion, es_suplemento " +
-            "FROM producto p " +
-            "INNER JOIN categoria c ON p.categoria_id = c.id";
+                    "       c.id AS categoria_id, c.nombre AS categoria_nombre, descripcion, es_suplemento " +
+                    "FROM producto p " +
+                    "INNER JOIN categoria c ON p.categoria_id = c.id";
 
     private static final String SQL_INSERT =
             "INSERT INTO producto (nombre, precio, stock, formato, sabor_material, categoria_id) " +
-            "VALUES (?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?)";
     private static final String SQL_UPDATE =
             "UPDATE producto SET nombre = ?, precio = ?, stock = ?, formato = ?, " +
-            "sabor_material = ?, categoria_id = ? WHERE id = ?";
+                    "sabor_material = ?, categoria_id = ? WHERE id = ?";
     private static final String SQL_COUNT = "SELECT COUNT(*) FROM producto";
     private static final String SQL_EXISTS = "SELECT 1 FROM producto WHERE id = ?";
     private static final String SQL_DELETE_BY_ID = "DELETE FROM producto WHERE id = ?";
@@ -49,6 +49,9 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
 
     @Override
     public boolean existsById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_EXISTS)) {
             ps.setLong(1, id);
@@ -62,11 +65,17 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
 
     @Override
     public Producto findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         return findByIdOptional(id).orElse(null);
     }
 
     @Override
     public Optional<Producto> findByIdOptional(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_BASE + " WHERE p.id = ?")) {
             ps.setLong(1, id);
@@ -98,6 +107,9 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
 
     @Override
     public <S extends Producto> S save(S producto) {
+        if (producto == null) {
+            throw new IllegalArgumentException("El producto no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection()) {
             boolean esNuevo = producto.getId() == null || !existsById(producto.getId());
             if (esNuevo) {
@@ -123,6 +135,9 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
 
     @Override
     public void deleteById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El id no puede ser nulo");
+        }
         try (Connection c = ConexionBD.getConnection();
              PreparedStatement ps = c.prepareStatement(SQL_DELETE_BY_ID)) {
             ps.setLong(1, id);
@@ -133,29 +148,26 @@ public class RepositorioProducto implements IRepositorioExtend<Producto, Long> {
     }
 
     @Override
-    public long deleteAll() {
+    public void deleteAll() {
         try (Connection c = ConexionBD.getConnection();
              Statement st = c.createStatement()) {
-            return st.executeUpdate(SQL_DELETE_ALL);
+            st.executeUpdate(SQL_DELETE_ALL);
         } catch (SQLException e) {
             throw new RuntimeException("Error borrando todos los productos", e);
         }
     }
 
-    @Override
     public Producto deleteAndGetById(Long id) {
         Producto producto = findById(id);
         if (producto != null) deleteById(id);
         return producto;
     }
 
-    @Override
     public List<Producto> findLast(int n) {
         List<Producto> todos = findAllToList();
         return todos.subList(Math.max(0, todos.size() - n), todos.size());
     }
 
-    @Override
     public boolean isEmpty() {
         return count() == 0;
     }

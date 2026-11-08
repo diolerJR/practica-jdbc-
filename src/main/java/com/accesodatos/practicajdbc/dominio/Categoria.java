@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/** RAÍZ AGREGADA categoria-producto: modificación de productos solo a través de ella. */
+
 public class Categoria {
 
     private Long id;
@@ -48,10 +48,15 @@ public class Categoria {
         return Collections.unmodifiableList(productos);
     }
 
-    /** Visibilidad de paquete: solo para rehidratar el agregado desde JDBC. */
-    void loadProductos(List<Producto> productos) {
+    /** Para rehidratar el agregado desde JDBC. */
+    public void loadProductos(List<Producto> productos) {
         this.productos.clear();
-        this.productos.addAll(productos);
+        if (productos != null) {
+            for (Producto p : productos) {
+                p.setCategoria(this);
+                this.productos.add(p);
+            }
+        }
     }
 
     public Long getId() {
